@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Show Letterboxd rating on IMDb
-// @version      1.0.0
+// @version      1.0.1
 // @namespace    https://github.com/chrisjp
 // @description  Shows a film's Letterboxd rating on its corresponding IMDb page.
 // @license      MIT
@@ -12,7 +12,7 @@
 
 // @match        https://*.imdb.com/title/tt*
 // @connect      letterboxd.com
-// @grant        GM_xmlhttpRequest
+// @grant        GM.xmlHttpRequest
 //
 // @run-at       document-end
 // @noframes
