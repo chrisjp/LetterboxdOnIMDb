@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Show Letterboxd rating on IMDb
-// @version      1.0.1
+// @version      1.0.2
 // @namespace    https://github.com/chrisjp
 // @description  Shows a film's Letterboxd rating on its corresponding IMDb page.
 // @license      MIT
@@ -13,6 +13,7 @@
 // @match        https://*.imdb.com/title/tt*
 // @connect      letterboxd.com
 // @grant        GM.xmlHttpRequest
+// @grant        GM.addStyle
 //
 // @run-at       document-end
 // @noframes
@@ -115,7 +116,7 @@ function getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl)
 
 function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTotalRatings)
 {
-    // Since a lot of relevant class names are random on each page load... Basically we...
+    // Since a lot of relevant class names are random on each page load... Basically we:
     // 1. get the div.rating-bar__base-button elements
     // 2. clone the first one (IMDb average user rating)
     // 3. set its HTML to the information we just scraped from Letterboxd
@@ -125,6 +126,12 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
     // clone the node
     let ratingBarBtns = document.querySelectorAll(".rating-bar__base-button");
     let ratingBarBtnLetterboxd = ratingBarBtns[0].cloneNode(true);
+
+    // set id
+    ratingBarBtnLetterboxd.id = "letterboxd-rating";
+
+    // set css (this forces it to the leftmost position in the ratings bar)
+    GM.addStyle("#letterboxd-rating { order: -1; }");
 
     // set title
     ratingBarBtnLetterboxd.children[0].innerHTML = "Letterboxd".toUpperCase();
@@ -145,8 +152,12 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
     // total ratings
     letterboxdElementRatingDiv.children[2].innerHTML = letterboxdTotalRatings != "-" ? numRound(letterboxdTotalRatings) : "-";
 
-    // Add it to the DOM
-    ratingBarBtns[0].parentNode.innerHTML = ratingBarBtnLetterboxd.outerHTML + ratingBarBtns[0].parentNode.innerHTML;
+    // make data-testid a unique value
+    ratingBarBtnLetterboxd.dataset.testid = "hero-rating-bar__letterboxd-rating";
+    letterboxdElementRatingDiv.children[0].dataset.testid = "hero-rating-bar__letterboxd-rating";
+
+    // Add the finished element to the DOM
+    ratingBarBtns[0].parentNode.appendChild(ratingBarBtnLetterboxd);
 }
 
 function numRound(num)
