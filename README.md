@@ -8,7 +8,7 @@ You'll need a userscript manager installed in your browser. I personally use Tam
 
 Option 1: Install via [GreasyFork](https://greasyfork.org/en/scripts/452708-letterboxd-rating-on-imdb).
 
-Option 2: If you don't wish to use GreasyFork, simply view the [.user.js file](https://raw.githubusercontent.com/chrisjp/LetterboxdOnIMDb/master/Letterboxd%20rating%20on%20IMDb.user.js) in your browser. Your userscript manager should prompt you to install it, if not you can and paste the contents of the file into a new script and save it.
+Option 2: If you don't wish to use GreasyFork, simply view the [.user.js file](https://raw.githubusercontent.com/chrisjp/LetterboxdOnIMDb/master/Letterboxd%20rating%20on%20IMDb.user.js) in your browser. Your userscript manager should prompt you to install it, if not you can copy and paste the contents of the file into a new script and save it. Do note that repository URLs and file/directory names may change in the future, so installing from GreasyFork should be the preferred method.
 
 ### Screenshots
 IMDb film page with Letterboxd rating added:
