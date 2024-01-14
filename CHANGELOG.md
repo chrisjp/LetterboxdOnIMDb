@@ -1,5 +1,8 @@
 # Changelog
 
+### 2024-01-14 - 1.0.4
+* Fix: Rating count will now correctly show M for million instead of K for thousands on films with over 1 million ratings on Letterboxd.
+
 ### 2023-11-23 - 1.0.3
 * New: Letterboxd link and rate count will now be shown on pages for films that don't have enough IMDb ratings to show the average score.
   * You'll rarely encounter this, if you do it'll likely be some obscure short film or something that's just been added.

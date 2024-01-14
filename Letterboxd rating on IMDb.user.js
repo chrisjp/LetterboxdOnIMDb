@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Letterboxd ratings on IMDb
-// @version      1.0.3
+// @version      1.0.4
 // @namespace    https://github.com/chrisjp
 // @description  Shows a film's Letterboxd rating on its IMDb page.
 // @license      MIT
@@ -99,7 +99,7 @@ function getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl)
             if (letterboxdRatingA) {
                 const letterboxdRating = parseFloat(letterboxdRatingA.innerText);
                 const letterboxdTotalRatingsText = letterboxdRatingA.title;
-                const letterboxdTotalRatings = parseInt(letterboxdTotalRatingsText.match("based on \(.*\)ratings")[1].replace(",",""));
+                const letterboxdTotalRatings = parseInt(letterboxdTotalRatingsText.match("based on \(.*\)ratings")[1].replaceAll(",",""));
 
                 addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTotalRatings);
             }
