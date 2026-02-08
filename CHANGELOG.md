@@ -1,5 +1,8 @@
 # Changelog
 
+### 2025-07-06 - 1.0.5
+* Fix: Letterboxd changed the URL used for fetching ratings.
+
 ### 2024-01-14 - 1.0.4
 * Fix: Rating count will now correctly show M for million instead of K for thousands on films with over 1 million ratings on Letterboxd.
 
