@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Letterboxd ratings on IMDb
-// @version      1.0.5
+// @version      1.1.0
 // @namespace    https://github.com/chrisjp
 // @description  Shows a film's Letterboxd rating on its IMDb page.
 // @license      MIT
@@ -9,16 +9,43 @@
 // @homepageURL  https://github.com/chrisjp/LetterboxdOnIMDb
 // @supportURL   https://github.com/chrisjp/LetterboxdOnIMDb/issues
 // @match        https://*.imdb.com/title/tt*
+// @require      https://openuserjs.org/src/libs/sizzle/GM_config.min.js
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=www.imdb.com
 // @connect      letterboxd.com
 // @grant        GM.xmlHttpRequest
-// @grant        GM.addStyle
+// @grant        GM_addStyle
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @run-at       document-end
 // @noframes
 // ==/UserScript==
 
 (function() {
     'use strict';
+
+    // Config panel
+    let gmConfiguration = {
+        'id': 'lbRatingsOnIMDb',
+        'title': 'Letterboxd ratings on IMDb',
+        'fields': {
+            'score_10':
+            {
+                'label': 'Show score out of 10',
+                'section': ['Score Display Options', 'Changing this value will require you to refresh the page after saving'], // Appears above the field
+                'type': 'checkbox',
+                'default': false
+            }
+        },
+        'events': {
+            "open": (document, window, frame) => {
+                GM_config.frame.setAttribute("style", "inset: 130px;border: 1px solid rgb(0, 0, 0);width: 400px;height: 200px;margin: 0 auto;opacity: 1;overflow: auto;padding: 0px;position: fixed;z-index: 9999;display: block;");
+            },
+            "save": () => {
+                GM_config.close();
+            }
+        }
+    };
+    GM_config.init(gmConfiguration);
 
     // Perform some checks...
     // 1. that this film has a rating (i.e. it's been released)
@@ -178,6 +205,7 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
     // Clone the node
     let ratingBarBtns = document.querySelectorAll(".rating-bar__base-button");
     let ratingBarBtnLetterboxd = ratingBarBtns[0].cloneNode(true);
+    const scoreOutOfTen = GM_config ? GM_config.get('score_10', false) : false;
 
     // Add CSS (this forces it to the leftmost position in the ratings bar)
     // Also adds CSS for Letterboxd button on films without a rating yet.
@@ -206,13 +234,11 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
     `);
 
     // Set title
-    ratingBarBtnLetterboxd.children[0].innerHTML = "Letterboxd".toUpperCase();
+    ratingBarBtnLetterboxd.children[0].innerHTML = "Letterboxd".toUpperCase() + ' <span id="lbRatingP" style="cursor:pointer;"></span>';
 
     // If the cloned node is the IMDb aggregate rating we can simply overwrite the child elements' innerHTML
     // with data we've obtained from Letterboxd
     if (ratingBarBtnLetterboxd.dataset.testid === "hero-rating-bar__aggregate-rating") {
-        console.log("We have a valid IMDb rating. Adding Letterboxd rating to DOM...");
-
         // set a.href
         let letterboxdElementA = ratingBarBtnLetterboxd.children[1];
         letterboxdElementA.href = letterboxdUrl;
@@ -224,8 +250,14 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
         // ratings data
         let letterboxdElementRatingDiv = letterboxdElementADiv.children[1];
         // average rating
-        letterboxdElementRatingDiv.children[0].children[0].innerHTML = letterboxdRating;
-        letterboxdElementRatingDiv.children[0].children[1].innerHTML = "/5";
+        if (!scoreOutOfTen) {
+            letterboxdElementRatingDiv.children[0].children[0].innerHTML = letterboxdRating;
+            letterboxdElementRatingDiv.children[0].children[1].innerHTML = "/5";
+        }
+        else {
+            letterboxdElementRatingDiv.children[0].children[0].innerHTML = parseFloat(letterboxdRating * 2).toFixed(1);
+            letterboxdElementRatingDiv.children[0].children[1].innerHTML = "/10";
+        }
         // total ratings
         letterboxdElementRatingDiv.children[2].innerHTML = letterboxdTotalRatings != "-" ? numRound(letterboxdTotalRatings) : "-";
         // data-testid
@@ -235,7 +267,6 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
     // The child nodes of the <button> are very similar so we can still modify the HTML to show the Letterboxd rating, then add our own
     // <div> to display the total number of ratings.
     else if (ratingBarBtnLetterboxd.dataset.testid === "hero-rating-bar__user-rating") {
-        console.log("We don't have a valid IMDb rating. Adding Letterboxd link to DOM with manual rate count...");
         let btnNode = ratingBarBtnLetterboxd.children[1];
         let btnChildNode = ratingBarBtnLetterboxd.children[1].children[0];
 
@@ -253,8 +284,13 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
         // ratings data container
         let letterboxdElementRatingDiv = letterboxdElementADiv.children[1];
         // average rating
-        letterboxdElementRatingDiv.children[0].children[0].innerHTML = letterboxdRating;
-        letterboxdElementRatingDiv.children[0].innerHTML = letterboxdElementRatingDiv.children[0].innerHTML.replace("/10", "/5");
+        if (!scoreOutOfTen) {
+            letterboxdElementRatingDiv.children[0].children[0].innerHTML = letterboxdRating;
+            letterboxdElementRatingDiv.children[0].innerHTML = letterboxdElementRatingDiv.children[0].innerHTML.replace("/10", "/5");
+        }
+        else {
+            letterboxdElementRatingDiv.children[0].children[0].innerHTML = parseFloat(letterboxdRating * 2).toFixed(1);
+        }
         // total ratings (need to make our own div for this)
         let letterboxdTotalRatingsDiv = document.createElement("div");
         letterboxdTotalRatingsDiv.className = "letterboxd-rating-bottom";
@@ -267,7 +303,7 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
     // If we get this far the film must be an upcoming one that's getting enough attention to trigger the Popularity Meter.
     // We won't have any ratings to display here obviously, but we can at least link to the Letterboxd page for convenience.
     else {
-        console.log("We don't have a valid IMDb rating. This is probably an unreleased film. Adding Letterboxd link to DOM...");
+        console.log("No rating found. This is probably an unreleased film. Adding Letterboxd link to DOM with no rating...");
 
         // set a.href
         let letterboxdElementA = ratingBarBtnLetterboxd.children[1];
@@ -284,10 +320,24 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
         letterboxdElementADiv.children[1].children[1].remove();
     }
 
-
     // Add the finished element to the DOM
     ratingBarBtnLetterboxd.dataset.testid = "hero-rating-bar__letterboxd-rating";
     ratingBarBtns[0].parentNode.appendChild(ratingBarBtnLetterboxd);
+
+    // Create UI for preferences
+    letterboxdRatingPreferenceUI();
+}
+
+function letterboxdRatingPreferenceUI()
+{
+    const lbRatingP = document.getElementById('lbRatingP');
+    let letterboxRatingPreferenceDiv = document.createElement("div");
+    letterboxRatingPreferenceDiv.innerHTML = "⚙️";
+    letterboxRatingPreferenceDiv.style.display = 'block';
+    lbRatingP.append(letterboxRatingPreferenceDiv);
+    letterboxRatingPreferenceDiv.addEventListener("click", function (e) {
+        return GM_config.open();
+    });
 }
 
 function numRound(num)
