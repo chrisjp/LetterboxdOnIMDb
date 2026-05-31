@@ -60,7 +60,7 @@ function getLetterboxdRating(imdbId)
                 // a URL to its rating histogram, which we can then parse to obtain ratings data.
                 const letterboxdUrl = response.finalUrl;
                 const letterboxdId = letterboxdUrl.split(letterboxd)[1];
-                const letterboxdHistUrl = letterboxd + "/csi" + letterboxdId + "ratings-summary/";
+                const letterboxdHistUrl = letterboxd + "/csi" + letterboxdId + "rating-histogram/";
                 console.log("Letterboxd histogram URL for this film: " + letterboxdHistUrl);
                 getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl);
             }
@@ -94,8 +94,8 @@ function getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl)
             const parser = new DOMParser();
             const result = parser.parseFromString(response.responseText, "text/html");
 
-            // Parse the scraped HTML if we have a .display-rating element.
-            const letterboxdRatingA = result.getElementsByClassName("display-rating")[0];
+            // Parse the scraped HTML if we have the average rating element.
+            const letterboxdRatingA = result.getElementsByClassName("averagerating")[0];
             if (letterboxdRatingA) {
                 const letterboxdRating = parseFloat(letterboxdRatingA.innerText);
                 const letterboxdTotalRatingsText = letterboxdRatingA.title;
@@ -104,28 +104,54 @@ function getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl)
                 addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTotalRatings);
             }
             else {
-                // If we reached this point it's almost certainly because the film does not yet have enough ratings for Letterboxd
-                // to calculate the weighted average. Check for "not enough ratings" text to confirm, then manually calculate.
-                let letterboxdTotalRatings = 0;
-                const notEnoughRatings = result.querySelector('[title="Not enough ratings to calculate average"]');
-                if (notEnoughRatings) {
-                    // we can try to manually calculate the number of ratings
-                    const regexCalc = /title="(\d)&nbsp/gm;
-                    const matches = response.responseText.matchAll(regexCalc);
-                    for (let match of matches) {
-                        letterboxdTotalRatings += parseInt(match[1]);
-                    }
-                    console.log("Manually counted " + letterboxdTotalRatings + " ratings on Letterboxd for this film.");
+                // If we reached this point there are two possibilities:
+                //   1. the film does not yet have enough ratings for Letterboxd to calculate the weighted average
+                //   2. the film has not yet been released and/or has 0 ratings
 
+                let letterboxdTotalRatings = 0;
+                let letterboxdTotalScore = 0;
+                let letterboxdRating = 0;
+
+                // Check for the presence of table.chart and if it exists we can attempt to manually count the ratings
+                const notEnoughRatings = result.getElementsByClassName("chart")[0];
+                if (notEnoughRatings) {
+                    const starValues = {
+                        "half-★": 0.5,
+                        "★": 1,
+                        "★½": 1.5,
+                        "★★": 2,
+                        "★★½": 2.5,
+                        "★★★": 3,
+                        "★★★½": 3.5,
+                        "★★★★": 4,
+                        "★★★★½": 4.5,
+                        "★★★★★": 5
+                    }
+                    const regexCalc = /title="(\d)\s(.*)rating/gm;
+
+                    // Iterate over each star rating and sum up the number of ratings and the total score
+                    const starsWithRatings = result.querySelectorAll("a.barcolumn");
+                    for (let i = 0; i < starsWithRatings.length; i++) {
+                        const matches = starsWithRatings[i].outerHTML.matchAll(regexCalc);
+                        for (let match of matches) {
+                            letterboxdTotalRatings += parseInt(match[1]);
+                            letterboxdTotalScore += starValues[match[2].trim()] * parseInt(match[1]);
+                        }
+                    }
+
+                    console.log("Manually counted " + letterboxdTotalRatings + " ratings on Letterboxd for this film.");
                 }
                 else {
-                    // If the "not enough ratings" text can't be found that means there's no ratings at all.
-                    // This will usually mean it's a currently unreleased film. We can still try to show
-                    // a link to the Letterboxd page without any rating data.
+                    // It's probably an unreleased film
+                    // We can still try to show a link to the Letterboxd page without any rating data.
                     console.log("Film exists on Letterboxd but has no ratings data.");
                 }
+
+                // Quick mafs
                 letterboxdTotalRatings = letterboxdTotalRatings > 0 ? letterboxdTotalRatings : "-";
-                addLetterboxdRatingToIMDb(letterboxdUrl, "-", letterboxdTotalRatings);
+                letterboxdRating = (letterboxdTotalRatings > 0 && letterboxdTotalScore > 0) ? parseFloat(letterboxdTotalScore / letterboxdTotalRatings).toFixed(1) : "-";
+                // We're done
+                addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTotalRatings);
             }
         },
         onerror: function() {
