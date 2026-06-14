@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Letterboxd ratings on IMDb
-// @version      1.1.0
+// @version      1.1.1
 // @namespace    https://github.com/chrisjp
 // @description  Shows a film's Letterboxd rating on its IMDb page.
 // @license      MIT
@@ -13,9 +13,9 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=www.imdb.com
 // @connect      letterboxd.com
 // @grant        GM.xmlHttpRequest
-// @grant        GM_addStyle
-// @grant        GM_getValue
-// @grant        GM_setValue
+// @grant        GM.addStyle
+// @grant        GM.getValue
+// @grant        GM.setValue
 // @run-at       document-end
 // @noframes
 // ==/UserScript==
@@ -46,6 +46,23 @@
         }
     };
     GM_config.init(gmConfiguration);
+
+    // Compatibility with Greasemonkey
+    if (typeof GM_addStyle == 'undefined') {
+        function GM_addStyle(aCss) {
+            'use strict';
+            let head = document.getElementsByTagName('head')[0];
+            if (head) {
+                let style = document.createElement('style');
+                style.setAttribute('type', 'text/css');
+                style.textContent = aCss;
+                head.appendChild(style);
+                return style;
+            }
+            return null;
+        }
+        GM.addStyle = GM_addStyle;
+    }
 
     // Perform some checks...
     // 1. that this film has a rating (i.e. it's been released)
