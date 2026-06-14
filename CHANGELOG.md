@@ -1,5 +1,11 @@
 # Changelog
 
+### 2026-06-14 - 1.1.1
+
+* Fix: Compatibility with more userscript managers
+  * Restores support for Violentmonkey, which had been broken in the previous update
+  * Adds support for Greasemonkey
+
 ### 2026-05-31 - 1.1.0
 
 * Added: New settings panel (click the ⚙️ icon next to the Letterboxd rating) where you can choose whether to show the Letterboxd rating out of 10
