@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Letterboxd ratings on IMDb
-// @version      1.1.1
+// @version      1.1.2
 // @namespace    https://github.com/chrisjp
 // @description  Shows a film's Letterboxd rating on its IMDb page.
 // @license      MIT
@@ -79,11 +79,11 @@
     // Get IMDb ID from the URL
     let imdbId = document.URL.match(/\/tt([0-9]+)\//)[1];
     if (imdbId > 0 && (filmHasAggRating !== null || filmHasYourRating !== null || filmHasPopularity !== null)) {
-        //console.log("IMDb ID: " + imdbId);
+        //console.log("LetterboxdOnIMDb: IMDb ID: " + imdbId);
         getLetterboxdRating(imdbId);
     }
     else {
-        console.log("Letterboxd on IMDb user script: No rating bar found. Film has probably not yet been released, or we're on a subpage of this film.");
+        console.log("LetterboxdOnIMDb: No rating bar found. Film has probably not yet been released, or we're on a subpage of this film.");
     }
 })();
 
@@ -103,25 +103,28 @@ function getLetterboxdRating(imdbId)
                 // or in this case the URL slug identifying it. With that we can then generate
                 // a URL to its rating histogram, which we can then parse to obtain ratings data.
                 const letterboxdUrl = response.finalUrl;
-                const letterboxdId = letterboxdUrl.split(letterboxd)[1];
+                let letterboxdId = letterboxdUrl.split(letterboxd)[1];
+                // Sometimes the URL will include a hash which will break the histogram URL
+                const hashIndex = letterboxdId.indexOf('#');
+                letterboxdId = hashIndex > 0 ? letterboxdId.substring(0, hashIndex) : letterboxdId;
                 const letterboxdHistUrl = letterboxd + "/csi" + letterboxdId + "rating-histogram/";
-                console.log("Letterboxd histogram URL for this film: " + letterboxdHistUrl);
+                console.log("LetterboxdOnIMDb: Histogram URL for this film: " + letterboxdHistUrl);
                 getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl);
             }
             else {
                 // We did not get redirected to the film's URL on Letterboxd, meaning it hasn't been added to their database
                 // or doesn't have an IMDb ID associated with it.
-                console.log("Film not found on Letterboxd.");
+                console.log("LetterboxdOnIMDb:Film not found on Letterboxd.");
             }
         },
         onerror: function() {
-            console.log("Letterboxd on IMDb user script: Request Error in getLetterboxdRating.");
+            console.log("LetterboxdOnIMDb: Request Error in getLetterboxdRating.");
         },
         onabort: function() {
-            console.log("Letterboxd on IMDb user script: Request is aborted in getLetterboxdRating");
+            console.log("LetterboxdOnIMDb: Request is aborted in getLetterboxdRating");
         },
         ontimeout: function() {
-            console.log("Letterboxd on IMDb user script: Request timed out in getLetterboxdRating.");
+            console.log("LetterboxdOnIMDb: Request timed out in getLetterboxdRating.");
         }
     });
 }
@@ -183,12 +186,12 @@ function getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl)
                         }
                     }
 
-                    console.log("Manually counted " + letterboxdTotalRatings + " ratings on Letterboxd for this film.");
+                    console.log("LetterboxdOnIMDb: Manually counted " + letterboxdTotalRatings + " ratings on Letterboxd for this film.");
                 }
                 else {
                     // It's probably an unreleased film
                     // We can still try to show a link to the Letterboxd page without any rating data.
-                    console.log("Film exists on Letterboxd but has no ratings data.");
+                    console.log("LetterboxdOnIMDb: Film exists on Letterboxd but has no ratings data.");
                 }
 
                 // Quick mafs
@@ -199,13 +202,13 @@ function getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl)
             }
         },
         onerror: function() {
-            console.log("Letterboxd on IMDb user script: Request Error in getLetterboxdHistogram.");
+            console.log("LetterboxdOnIMDb: Request Error in getLetterboxdHistogram.");
         },
         onabort: function() {
-            console.log("Letterboxd on IMDb user script: Request is aborted in getLetterboxdHistogram.");
+            console.log("LetterboxdOnIMDb: Request is aborted in getLetterboxdHistogram.");
         },
         ontimeout: function() {
-            console.log("Letterboxd on IMDb user script: Request timed out in getLetterboxdHistogram.");
+            console.log("LetterboxdOnIMDb: Request timed out in getLetterboxdHistogram.");
         }
     });
 }
@@ -320,7 +323,7 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
     // If we get this far the film must be an upcoming one that's getting enough attention to trigger the Popularity Meter.
     // We won't have any ratings to display here obviously, but we can at least link to the Letterboxd page for convenience.
     else {
-        console.log("No rating found. This is probably an unreleased film. Adding Letterboxd link to DOM with no rating...");
+        console.log("LetterboxdOnIMDb: No rating found. This is probably an unreleased film. Adding Letterboxd link to DOM with no rating...");
 
         // set a.href
         let letterboxdElementA = ratingBarBtnLetterboxd.children[1];
@@ -351,6 +354,7 @@ function letterboxdRatingPreferenceUI()
     let letterboxRatingPreferenceDiv = document.createElement("div");
     letterboxRatingPreferenceDiv.innerHTML = "⚙️";
     letterboxRatingPreferenceDiv.style.display = 'block';
+    console.log("LetterboxdOnIMDb: Adding preference UI to DOM...");
     lbRatingP.append(letterboxRatingPreferenceDiv);
     letterboxRatingPreferenceDiv.addEventListener("click", function (e) {
         return GM_config.open();
