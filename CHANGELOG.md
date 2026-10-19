@@ -1,9 +1,13 @@
 # Changelog
 
+### 2026-10-19 - 1.1.3
+
+* Fixed: A potential issue where the Letterboxd rating could be immediately removed from display after it was added
+
 ### 2026-10-18 - 1.1.2
 
 * Fixed: Letterboxd rating showed `NaN` due to URL tweaks
-* Changed: `console.log()` lines now prefixed with script name so it's obvious it's not the IMDb's own log lines
+* Changed: `console.log()` lines now prefixed with script name so it's obvious it's not IMDb's own log lines
 
 ### 2026-06-14 - 1.1.1
 

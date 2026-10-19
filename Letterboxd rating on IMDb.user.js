@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Letterboxd ratings on IMDb
-// @version      1.1.2
+// @version      1.1.3
 // @namespace    https://github.com/chrisjp
 // @description  Shows a film's Letterboxd rating on its IMDb page.
 // @license      MIT
@@ -102,11 +102,11 @@ function getLetterboxdRating(imdbId)
                 // We were redirected, so the film exists on Letterboxd. Now we can get its ID,
                 // or in this case the URL slug identifying it. With that we can then generate
                 // a URL to its rating histogram, which we can then parse to obtain ratings data.
-                const letterboxdUrl = response.finalUrl;
-                let letterboxdId = letterboxdUrl.split(letterboxd)[1];
-                // Sometimes the URL will include a hash which will break the histogram URL
-                const hashIndex = letterboxdId.indexOf('#');
-                letterboxdId = hashIndex > 0 ? letterboxdId.substring(0, hashIndex) : letterboxdId;
+                // Sometimes the URL will include a hash which will break the histogram URL, so we need to remove it if present.
+                let letterboxdUrl = response.finalUrl;
+                const hashIndex = letterboxdUrl.indexOf('#');
+                letterboxdUrl = hashIndex > 0 ? letterboxdUrl.substring(0, hashIndex) : letterboxdUrl;
+                const letterboxdId = letterboxdUrl.split(letterboxd)[1];
                 const letterboxdHistUrl = letterboxd + "/csi" + letterboxdId + "rating-histogram/";
                 console.log("LetterboxdOnIMDb: Histogram URL for this film: " + letterboxdHistUrl);
                 getLetterboxdHistogram(letterboxdUrl, letterboxdHistUrl);
@@ -114,7 +114,7 @@ function getLetterboxdRating(imdbId)
             else {
                 // We did not get redirected to the film's URL on Letterboxd, meaning it hasn't been added to their database
                 // or doesn't have an IMDb ID associated with it.
-                console.log("LetterboxdOnIMDb:Film not found on Letterboxd.");
+                console.log("LetterboxdOnIMDb: Film not found on Letterboxd.");
             }
         },
         onerror: function() {
@@ -266,7 +266,7 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
         // edit all its child elements
         let letterboxdElementADiv = letterboxdElementA.children[0].children[0];
         // icon set to 24x24
-        letterboxdElementADiv.children[0].innerHTML = '<img src="https://www.google.com/s2/favicons?sz=64&domain=letterboxd.com" alt="" width="24" height="24">';
+        letterboxdElementADiv.children[0].innerHTML = '<img src="https://www.google.com/s2/favicons?sz=64&domain=letterboxd.com" alt="Letterboxd icon" width="24" height="24">';
         // ratings data
         let letterboxdElementRatingDiv = letterboxdElementADiv.children[1];
         // average rating
@@ -281,7 +281,7 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
         // total ratings
         letterboxdElementRatingDiv.children[2].innerHTML = letterboxdTotalRatings != "-" ? numRound(letterboxdTotalRatings) : "-";
         // data-testid
-        letterboxdElementRatingDiv.children[0].dataset.testid = "hero-rating-bar__letterboxd-rating";
+        letterboxdElementRatingDiv.children[0].dataset.testid = "";
     }
     // If the cloned node is NOT the IMDb aggregate rating (it doesn't have one) it'll be the button allowing us to rate it if logged in
     // The child nodes of the <button> are very similar so we can still modify the HTML to show the Letterboxd rating, then add our own
@@ -300,7 +300,7 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
         // edit all its child elements
         let letterboxdElementADiv = letterboxdElementA.children[0].children[0];
         // icon set to 24x24
-        letterboxdElementADiv.children[0].innerHTML = '<img src="https://www.google.com/s2/favicons?sz=64&domain=letterboxd.com" alt="" width="24" height="24">';
+        letterboxdElementADiv.children[0].innerHTML = '<img src="https://www.google.com/s2/favicons?sz=64&domain=letterboxd.com" alt="Letterbox icon" width="24" height="24">';
         // ratings data container
         let letterboxdElementRatingDiv = letterboxdElementADiv.children[1];
         // average rating
@@ -332,7 +332,7 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
         // edit all its child elements
         let letterboxdElementADiv = letterboxdElementA.children[0].children[0];
         // icon set to 24x24
-        letterboxdElementADiv.children[0].innerHTML = '<img src="https://www.google.com/s2/favicons?domain=letterboxd.com&sz=64" alt="" width="24" height="24">';
+        letterboxdElementADiv.children[0].innerHTML = '<img src="https://www.google.com/s2/favicons?domain=letterboxd.com&sz=64" alt="Letterboxd icon" width="24" height="24">';
         // replace score and delta and change data-testid
         letterboxdElementADiv.children[1].dataset.testid = "hero-rating-bar__letterboxd-link";
         letterboxdElementADiv.children[1].children[0].dataset.testid = "";
@@ -340,9 +340,31 @@ function addLetterboxdRatingToIMDb(letterboxdUrl, letterboxdRating, letterboxdTo
         letterboxdElementADiv.children[1].children[1].remove();
     }
 
-    // Add the finished element to the DOM
+    // Change the testid
     ratingBarBtnLetterboxd.dataset.testid = "hero-rating-bar__letterboxd-rating";
-    ratingBarBtns[0].parentNode.appendChild(ratingBarBtnLetterboxd);
+
+    // Add the finished element to the DOM
+    // The <div> we add this to gets completely recreated by React.
+    // This will mean the button disappears if it gets added before this happens (almost always the case)
+    // To workaround this we can attach a MutationObserver to the document.body to watch for changes
+    // After they happen, we add the button (again) if it's not found.
+    const obsconfig = { childList: true, subtree: true }
+    const callback = () => {
+        observer.disconnect();
+
+        // Find our button
+        const ourLbBtn = document.querySelector('[data-testid="hero-rating-bar__letterboxd-rating"]');
+        if (!ourLbBtn) {
+          // Add it to the DOM
+          console.log("LetterboxdOnIMDb: Adding LB rating button to the DOM.");
+          document.querySelectorAll(".rating-bar__base-button")[0].parentNode.appendChild(ratingBarBtnLetterboxd);
+        }
+
+        observer.observe(document.body, obsconfig);
+    }
+
+    const observer = new MutationObserver(callback)
+    callback();
 
     // Create UI for preferences
     letterboxdRatingPreferenceUI();
